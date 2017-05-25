@@ -163,7 +163,12 @@ func resourceSumologicPollingSourceRead(d *schema.ResourceData, meta interface{}
 }
 
 func resourceSumologicPollingSourceDelete(d *schema.ResourceData, meta interface{}) error {
-	return nil
+	c := meta.(*sumologic.SumologicClient)
+
+	id, _ := strconv.Atoi(d.Id())
+	collector_id, _ := d.Get("collector_id").(int)
+
+	return c.DestroySource(id, collector_id)
 }
 
 func thirdyPartyRefSourceAttributes(d *schema.ResourceData, pollingResource []sumologic.PollingResource) error {
