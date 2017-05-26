@@ -116,26 +116,6 @@ func (s *SumologicClient) UpdateHttpSource(source HttpSource, collectorId int) e
 
 }
 
-func (s *SumologicClient) UpdatePollingSource(source PollingSource, collectorId int) error {
-
-	url := fmt.Sprintf("collectors/%d/sources/%d", collectorId, source.Id)
-
-	type PollingSourceMessage struct {
-		Source PollingSource `json:"source"`
-	}
-
-	request := PollingSourceMessage {
-		Source: source,
-	}
-
-	_, err := s.Put(url, request)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
 
 // Polling source specific
 type PollingSource struct {
@@ -222,4 +202,24 @@ func (s *SumologicClient) GetPollingSource(collectorId, sourceId int) (*PollingS
 	err = json.Unmarshal(body, &response)
 
 	return &response.Source, nil
+}
+
+func (s *SumologicClient) UpdatePollingSource(source PollingSource, collectorId int) error {
+	url := fmt.Sprintf("collectors/%d/sources/%d", collectorId, source.Id)
+
+	type PollingSourceMessage struct {
+		Source PollingSource `json:"source"`
+	}
+
+	request := PollingSourceMessage {
+		Source: source,
+	}
+
+	_, err := s.Put(url, request)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
