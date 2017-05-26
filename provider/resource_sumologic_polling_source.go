@@ -11,18 +11,19 @@ func resourceSumologicPollingSource() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceSumologicPollingSourceCreate,
 		Read:   resourceSumologicPollingSourceRead,
+		Update: resourceSumologicPollingSourceUpdate,
 		Delete: resourceSumologicPollingSourceDelete,
 
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:     schema.TypeString,
 				Required: true,
-				ForceNew: true,
+				ForceNew: false,
 			},
 			"category": {
 				Type:     schema.TypeString,
 				Required: true,
-				ForceNew: true,
+				ForceNew: false,
 			},
 			"content_type": {
 				Type:     schema.TypeString,
@@ -32,12 +33,12 @@ func resourceSumologicPollingSource() *schema.Resource {
 			"scan_interval": {
 				Type:     schema.TypeInt,
 				Required: true,
-				ForceNew: true,
+				ForceNew: false,
 			},
 			"paused": {
 				Type:     schema.TypeBool,
 				Required: true,
-				ForceNew: true,
+				ForceNew: false,
 			},
 			"collector_id": {
 				Type:     schema.TypeInt,
@@ -150,8 +151,8 @@ func resourceSumologicPollingSourceRead(d *schema.ResourceData, meta interface{}
 		return err
 	}
 
-	pollingResource := source.ThirdPartyRef.Resources
-	thirdyPartyRefSourceAttributes(d, pollingResource)
+	pollingResources := source.ThirdPartyRef.Resources
+	thirdyPartyRefSourceAttributes(d, pollingResources)
 
 	d.Set("name", source.Name)
 	d.Set("content_type", source.ContentType)
@@ -170,6 +171,37 @@ func resourceSumologicPollingSourceDelete(d *schema.ResourceData, meta interface
 
 	return c.DestroySource(id, collector_id)
 }
+
+func resourceSumologicPollingSourceUpdate(d *schema.ResourceData, meta interface{}) error {
+	c := meta.(*sumologic.SumologicClient)
+
+	source := resourceToPollingSource(d)
+
+	err := c.UpdatePollingSource(source, d.Get("collector_id").(int))
+
+	if err != nil {
+		return err
+	}
+
+	return resourceSumologicPollingSourceRead(d, meta)
+}
+
+func resourceToPollingSource(d *schema.ResourceData) sumologic.PollingSource {
+
+	id, _ := strconv.Atoi(d.Id())
+
+	source := sumologic.PollingSource{}
+	source.Id = id
+	source.Type = "Polling"
+	source.Category = d.Get("category").(string)
+	source.Paused = d.Get("paused").(bool)
+	source.Name = d.Get("name").(string)
+	source.ScanInterval = d.Get("scan_interval").(int)
+	source.ContentType = d.Get("content_type").(string)
+
+	return source
+}
+
 
 func thirdyPartyRefSourceAttributes(d *schema.ResourceData, pollingResource []sumologic.PollingResource) error {
 
