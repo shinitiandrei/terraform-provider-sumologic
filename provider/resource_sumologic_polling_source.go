@@ -95,27 +95,6 @@ func resourceSumologicPollingSourceCreate(d *schema.ResourceData, meta interface
 
 	c := meta.(*sumologic.SumologicClient)
 
-	authSettings := sumologic.PollingAuthentication{}
-
-	auths := d.Get("authentication").([]interface{})
-
-	if len(auths) > 0 {
-		auth := auths[0].(map[string]interface{})
-		authSettings.Type = "S3BucketAuthentication"
-		authSettings.AwsId = auth["access_key"].(string)
-		authSettings.AwsKey = auth["secret_key"].(string)
-	}
-
-	pathSettings := sumologic.PollingPath{}
-	paths := d.Get("path").([]interface{})
-
-	if len(paths) > 0 {
-		path := paths[0].(map[string]interface{})
-		pathSettings.Type = "S3BucketPathExpression"
-		pathSettings.BucketName = path["bucket_name"].(string)
-		pathSettings.PathExpression = path["path_expression"].(string)
-	}
-
 	sourceId, err := c.CreatePollingSource(
 		d.Get("name").(string),
 		d.Get("content_type").(string),
@@ -123,8 +102,8 @@ func resourceSumologicPollingSourceCreate(d *schema.ResourceData, meta interface
 		d.Get("scan_interval").(int),
 		d.Get("paused").(bool),
 		d.Get("collector_id").(int),
-		authSettings,
-		pathSettings,
+		getAuthentication(d),
+		getPathSettings(d),
 	)
 
 	if err != nil {
@@ -152,7 +131,11 @@ func resourceSumologicPollingSourceRead(d *schema.ResourceData, meta interface{}
 	}
 
 	pollingResources := source.ThirdPartyRef.Resources
-	thirdyPartyRefSourceAttributes(d, pollingResources)
+	path := getThirdyPartyRefSourceAttributes(d, pollingResources)
+
+	if err := d.Set("path", path); err != nil {
+		return err
+	}
 
 	d.Set("name", source.Name)
 	d.Set("content_type", source.ContentType)
@@ -199,11 +182,12 @@ func resourceToPollingSource(d *schema.ResourceData) sumologic.PollingSource {
 	source.ScanInterval = d.Get("scan_interval").(int)
 	source.ContentType = d.Get("content_type").(string)
 
+
 	return source
 }
 
 
-func thirdyPartyRefSourceAttributes(d *schema.ResourceData, pollingResource []sumologic.PollingResource) error {
+func getThirdyPartyRefSourceAttributes(d *schema.ResourceData, pollingResource []sumologic.PollingResource) []map[string]interface{} {
 
 	var s []map[string]interface{}
 	for _, t := range pollingResource {
@@ -216,10 +200,36 @@ func thirdyPartyRefSourceAttributes(d *schema.ResourceData, pollingResource []su
 		s = append(s, mapping)
 	}
 
-	if err := d.Set("path", s); err != nil {
-		return err
+
+	return s
+}
+
+func getAuthentication(d *schema.ResourceData) sumologic.PollingAuthentication {
+
+	auths := d.Get("authentication").([]interface{})
+	authSettings := sumologic.PollingAuthentication{}
+
+	if len(auths) > 0 {
+		auth := auths[0].(map[string]interface{})
+		authSettings.Type = "S3BucketAuthentication"
+		authSettings.AwsId = auth["access_key"].(string)
+		authSettings.AwsKey = auth["secret_key"].(string)
 	}
 
-	return nil
+	return authSettings
+}
+
+func getPathSettings(d *schema.ResourceData) sumologic.PollingPath {
+	pathSettings := sumologic.PollingPath{}
+	paths := d.Get("path").([]interface{})
+
+	if len(paths) > 0 {
+		path := paths[0].(map[string]interface{})
+		pathSettings.Type = "S3BucketPathExpression"
+		pathSettings.BucketName = path["bucket_name"].(string)
+		pathSettings.PathExpression = path["path_expression"].(string)
+	}
+
+	return pathSettings
 }
 
