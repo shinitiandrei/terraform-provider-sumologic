@@ -131,7 +131,7 @@ func resourceSumologicPollingSourceRead(d *schema.ResourceData, meta interface{}
 	}
 
 	pollingResources := source.ThirdPartyRef.Resources
-	path := getThirdyPartyRefSourceAttributes(d, pollingResources)
+	path := getThirdyPartyPathAttributes(pollingResources)
 
 	if err := d.Set("path", path); err != nil {
 		return err
@@ -172,8 +172,9 @@ func resourceSumologicPollingSourceUpdate(d *schema.ResourceData, meta interface
 func resourceToPollingSource(d *schema.ResourceData) sumologic.PollingSource {
 
 	id, _ := strconv.Atoi(d.Id())
-
 	source := sumologic.PollingSource{}
+	pollingResource := sumologic.PollingResource{}
+
 	source.Id = id
 	source.Type = "Polling"
 	source.Category = d.Get("category").(string)
@@ -182,12 +183,16 @@ func resourceToPollingSource(d *schema.ResourceData) sumologic.PollingSource {
 	source.ScanInterval = d.Get("scan_interval").(int)
 	source.ContentType = d.Get("content_type").(string)
 
+	pollingResource.ServiceType    = "AwsS3AuditBucket"
+	pollingResource.Authentication = getAuthentication(d)
+	pollingResource.Path           = getPathSettings(d)
+
+	source.ThirdPartyRef.Resources = append(source.ThirdPartyRef.Resources, pollingResource)
 
 	return source
 }
 
-
-func getThirdyPartyRefSourceAttributes(d *schema.ResourceData, pollingResource []sumologic.PollingResource) []map[string]interface{} {
+func getThirdyPartyPathAttributes(pollingResource []sumologic.PollingResource) []map[string]interface{} {
 
 	var s []map[string]interface{}
 	for _, t := range pollingResource {
@@ -199,7 +204,6 @@ func getThirdyPartyRefSourceAttributes(d *schema.ResourceData, pollingResource [
 		log.Printf("[DEBUG] pollingResources - adding bukets and path expressions: %v", mapping)
 		s = append(s, mapping)
 	}
-
 
 	return s
 }
@@ -229,7 +233,6 @@ func getPathSettings(d *schema.ResourceData) sumologic.PollingPath {
 		pathSettings.BucketName = path["bucket_name"].(string)
 		pathSettings.PathExpression = path["path_expression"].(string)
 	}
-
 	return pathSettings
 }
 
