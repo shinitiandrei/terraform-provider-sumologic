@@ -21,6 +21,7 @@ var endpoints map[string]string = map[string]string{
 	"us2": "https://api.us2.sumologic.com/api/v1/",
 	"eu":  "https://api.eu.sumologic.com/api/v1/",
 	"au":  "https://api.au.sumologic.com/api/v1/",
+	"de":  "https://api.de.sumologic.com/api/v1/",
 }
 
 type ErrorResponse struct {
@@ -98,6 +99,10 @@ func (s *SumologicClient) Get(urlPath string) ([]byte, string, error) {
 
 	d, _ := ioutil.ReadAll(resp.Body)
 
+	if resp.StatusCode == 404 {
+		return nil, "", nil
+	}
+
 	if resp.StatusCode >= 400 {
 		var errorResponse ErrorResponse
 		_ = json.Unmarshal(d, &errorResponse)
@@ -119,6 +124,9 @@ func (s *SumologicClient) Delete(urlPath string) ([]byte, error) {
 
 	d, _ := ioutil.ReadAll(resp.Body)
 
+	if resp.StatusCode == 404 {
+		return d, nil
+	}
 	if resp.StatusCode >= 400 {
 		return nil, errors.New(string(d))
 	}
